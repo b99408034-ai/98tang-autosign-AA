@@ -237,7 +237,7 @@ jobs:
         ENABLE_SMART_TIMING: ${{ vars.ENABLE_SMART_TIMING || 'true' }}
         
         # Telegram通知配置
-        ENABLE_TELEGRAM_NOTIFICATION: ${{ vars.ENABLE_TELEGRAM_NOTIFICATION || 'false' }}
+        ENABLE_TELEGRAM_NOTIFICATION: ${{ vars.ENABLE_TELEGRAM_NOTIFICATION || 'true' }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_PROXY_URL: ${{ secrets.TELEGRAM_PROXY_URL }}
