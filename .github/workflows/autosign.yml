@@ -36,19 +36,23 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: 安装系统依赖和中文字体
+        - name: 安装系统依赖和 Chrome / ChromeDriver
       run: |
-        # 更新包管理器
+        set -euxo pipefail
         sudo apt-get update
-        
-        # 安装中文字体支持
-        sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra
-        sudo apt-get install -y language-pack-zh-hans
-        
-        # 设置字体缓存
+        sudo apt-get install -y wget curl ca-certificates fonts-noto-cjk fonts-noto-cjk-extra language-pack-zh-hans
+
+        # 强制安装受支持的 Google Chrome 稳定版，避免 runner 自带版本与 ChromeDriver 不匹配
+        sudo curl -fsSL -o /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt-get install -y /tmp/google-chrome-stable_current_amd64.deb
+
+        google-chrome --version
+        echo "CHROME_BIN=$(which google-chrome)" >> $GITHUB_ENV
+
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
+        echo "CHROME_VERSION=${CHROME_VERSION}" >> $GITHUB_ENV
+
         sudo fc-cache -fv
-        
-        # 验证中文字体安装
         echo "✅ 已安装的中文字体:"
         fc-list :lang=zh | head -5
         
