@@ -215,7 +215,7 @@ jobs:
         SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
         
         # 安全提问配置
-        ENABLE_SECURITY_QUESTION: ${{ vars.ENABLE_SECURITY_QUESTION || 'false' }}
+        ENABLE_SECURITY_QUESTION: ${{ vars.ENABLE_SECURITY_QUESTION || 'true' }}
         SECURITY_QUESTION: ${{ secrets.SECURITY_QUESTION }}
         SECURITY_ANSWER: ${{ secrets.SECURITY_ANSWER }}
         
