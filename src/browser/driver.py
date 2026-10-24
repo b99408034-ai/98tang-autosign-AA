@@ -5,6 +5,10 @@
 """
 
 import logging
+import os
+import re
+import shutil
+import subprocess
 from typing import Optional, Dict, Any
 
 # 浏览器自动化导入
@@ -51,6 +55,63 @@ except ImportError:
     except ImportError:
         raise ImportError("请安装selenium: pip install selenium")
 
+def resolve_chrome_binary() -> Optional[str]:
+    """Resolve the installed Chrome/Chromium binary path."""
+    candidates = [
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]
+
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
+
+    for cmd in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        located = shutil.which(cmd)
+        if located:
+            return located
+
+    return None
+
+
+def detect_chrome_major_version() -> Optional[int]:
+    """Detect the installed Chrome major version to match the correct driver."""
+    browser_path = resolve_chrome_binary()
+    if not browser_path:
+        return None
+
+    try:
+        result = subprocess.run(
+            [browser_path, "--version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        output = (result.stdout or result.stderr or "").strip()
+        match = re.search(r"(\d+)\.(\d+)\.(\d+)", output)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+
+    return None
+
+
+def install_chromedriver_for_current_chrome() -> Optional[str]:
+    """Install the ChromeDriver matching the currently installed Chrome version."""
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+        driver_path = ChromeDriverManager().install()
+        if driver_path and os.path.exists(driver_path):
+            return driver_path
+    except Exception as exc:
+        logging.getLogger(__name__).warning(f"自动安装 ChromeDriver 失败: {exc}")
+
+    return None
 
 class SafeChrome:
     """安全Chrome驱动包装器"""
@@ -183,10 +244,9 @@ class BrowserDriverManager:
                 options.add_argument(arg)
                 self.logger.debug(f"添加浏览器参数: {arg}")
 
-            # 配置浏览器偏好设置
+                       # 配置浏览器偏好设置
             prefs = {
                 "profile.default_content_setting_values": {"popups": 1},
-                # 中文字体配置
                 "webkit.webprefs.fonts.standard.Hans": "SimSun",
                 "webkit.webprefs.fonts.serif.Hans": "SimSun",
                 "webkit.webprefs.fonts.sansserif.Hans": "SimHei",
@@ -195,6 +255,63 @@ class BrowserDriverManager:
                 "webkit.webprefs.fonts.pictograph.Hans": "SimSun",
                 "webkit.webprefs.default_encoding": "UTF-8",
             }
+
+            if os.getenv("GITHUB_ACTIONS") or os.getenv("CI"):
+                ci_font_prefs = {
+                    "webkit.webprefs.fonts.standard.Hans": "Noto Sans CJK SC",
+                    "webkit.webprefs.fonts.serif.Hans": "Noto Serif CJK SC",
+                    "webkit.webprefs.fonts.sansserif.Hans": "Noto Sans CJK SC",
+                    "webkit.webprefs.fonts.cursive.Hans": "Noto Sans CJK SC",
+                    "webkit.webprefs.fonts.fantasy.Hans": "Noto Sans CJK SC",
+                    "webkit.webprefs.fonts.pictograph.Hans": "Noto Sans CJK SC",
+                }
+                prefs.update(ci_font_prefs)
+                self.logger.debug("配置CI环境中文字体偏好")
+
+            options.add_experimental_option("prefs", prefs)
+            self.logger.debug("配置浏览器偏好设置: 弹出窗口允许、中文字体支持")
+
+            browser_binary = resolve_chrome_binary()
+            if browser_binary:
+                options.binary_location = browser_binary
+                self.logger.debug(f"设置 Chrome 二进制路径: {browser_binary}")
+
+            chrome_major = detect_chrome_major_version()
+            if chrome_major:
+                self.logger.info(f"检测到 Chrome 版本: {chrome_major}")
+
+            self.logger.debug("开始初始化浏览器实例")
+            try:
+                if UNDETECTED_AVAILABLE:
+                    if chrome_major:
+                        raw_driver = uc.Chrome(options=options, version_main=chrome_major)
+                    else:
+                        raw_driver = uc.Chrome(options=options)
+                else:
+                    driver_path = install_chromedriver_for_current_chrome()
+                    if driver_path:
+                        raw_driver = webdriver.Chrome(
+                            service=Service(driver_path),
+                            options=options,
+                        )
+                    else:
+                        raw_driver = webdriver.Chrome(options=options)
+            except Exception as driver_error:
+                self.logger.warning(f"首次创建浏览器失败，尝试回退方案: {driver_error}")
+                try:
+                    if UNDETECTED_AVAILABLE:
+                        raw_driver = uc.Chrome(options=options)
+                    else:
+                        driver_path = install_chromedriver_for_current_chrome()
+                        if driver_path:
+                            raw_driver = webdriver.Chrome(
+                                service=Service(driver_path),
+                                options=options,
+                            )
+                        else:
+                            raw_driver = webdriver.Chrome(options=options)
+                except Exception as retry_error:
+                    raise WebDriverException(f"创建浏览器驱动失败: {retry_error}") from retry_error
 
             # CI环境的额外字体配置
             if os.getenv("GITHUB_ACTIONS") or os.getenv("CI"):
