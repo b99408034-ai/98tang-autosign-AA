@@ -1,4 +1,4 @@
-    def create_driver(self, config: Dict[str, Any]) -> bool:
+def create_driver(self, config: Dict[str, Any]) -> bool:
         """
         创建浏览器驱动
 
