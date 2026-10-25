@@ -96,7 +96,7 @@ jobs:
         SECURITY_QUESTION: ${{ secrets.SECURITY_QUESTION }}
         SECURITY_ANSWER: ${{ secrets.SECURITY_ANSWER }}
 
-        BASE_URL: ${{ vars.BASE_URL || 'https://www.sehuatang.org' }}
+        BASE_URL: ${{ vars.BASE_URL || 'https://roy3.xst1n.com/' }}
         ENABLE_CHECKIN: ${{ vars.ENABLE_CHECKIN || 'true' }}
 
         ENABLE_REPLY: ${{ vars.ENABLE_REPLY || 'true' }}
@@ -222,7 +222,7 @@ jobs:
         SECURITY_ANSWER: ${{ secrets.SECURITY_ANSWER }}
         
         # 核心功能配置
-        BASE_URL: ${{ vars.BASE_URL || 'https://www.sehuatang.org' }}
+        BASE_URL: ${{ vars.BASE_URL || 'https://roy3.xst1n.com/' }}
         ENABLE_CHECKIN: ${{ vars.ENABLE_CHECKIN || 'true' }}
         
         # 拟人化行为配置
